@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
-
+import os
 
 class UserCreate(BaseModel):
     name: str
@@ -12,12 +12,20 @@ class UserCreate(BaseModel):
 
 app = FastAPI()
 
-DB_CONFIG = {
-    "dbname": "bank",
-    "user": "postgres",
-    "password": "dbpass123",
-    "host": "localhost"
-}
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_db_connection():
+    if DATABASE_URL:
+        return psycopg2.connect(DATABASE_URL)
+    else:
+        return psycopg2.connect(
+            dbname="bank",
+            user="postgres",
+            password="dbpass123",
+            host="localhost"
+        )
+
+
 
 @app.get("/")
 def home():
@@ -26,7 +34,7 @@ def home():
 @app.get("/users")
 def get_users():
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = get_db_connection()
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -46,7 +54,7 @@ def get_users():
 @app.post("/create_user")
 def create_user(user_data: UserCreate):
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = get_db_connection()
         cur = conn.cursor()
 
         query = "INSERT INTO accounts (name, balance, interest_rate) VALUES (%s, %s, %s);"
