@@ -84,3 +84,39 @@ pip freeze > requirements.txt
 sudo apt update
 sudo apt install docker.io -y
 sudo usermod -aG docker $USER
+source .venv/bin/activate
+docker --version
+docker build -t bank-app .
+sudo docker build -t bank-app .
+sudo docker run --network="host" bank-app
+sudo docker build -t bank-app .
+pip install --upgrade pip
+sudo docker build -t bank-app .
+sudo docker run --network="host" bank-app
+sudo fuser -k 8000/tcp
+sudo docker run --network="host" bank-app
+sudo killall uvicorn
+sudo docker run --network="host" bank-app
+clear
+git init
+git add .
+git commit -m "First commit: Bank API with Docker"
+git remote add origin https://github.com/mzn01/bank-api.git
+git branch -M main
+git push -u origin main
+rm -rf .git
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remove add origin https://github.com/mzn01/bank-api.git
+git remote add origin https://github.com/mzn01/bank-api.git
+git push -u --force origin main
+git add .
+git commit -m "Added dynamic database connection"
+git push
+python3 init_cloud_db.py
+clear
+sudo docker stop $(sudo docker ps -q)
+deactivate
+exit
