@@ -1,39 +1,63 @@
-import streamlit as st 
-import tools
-import pandas as pd
+import streamlit as st
+import os
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+import tools  # Your banking tools
 
-st.set_page_config(page_title="Bnak of Maazin", page_icon="🏦")
-st.title("Bank of Maazin: Admin Dashboard")
+# 1. Setup Page
+st.set_page_config(page_title="AI Smart Bank", page_icon="🤖")
+st.title("🤖 AI Banker: Talk to your Money")
 
-st.sidebar.header("Actions")
-option = st.sidebar.selectbox("Choose a tool:",["View All Users","Create New User"])
+# 2. Load Keys
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
 
-if option == "View All Users":
-    st.subheader("Live Custumer Database")
+# 3. Initialize Chat History (Memory)
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "model", "content": "Hello! I am your AI Banker. I can create accounts and check balances. How can I help?"}
+    ]
 
-    if st.button("Refresh Data"):
-        with st.spinner("Connecting to Cloud..."):
-            data = tools.get_all_users()
+# 4. Display Chat History
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-            if "user" in data:
-                users = data["user"]
-                df = pd.DataFrame(users)
-                st.dataframe(df,use_container_width=True)
-                st.success(f"Found {len(users)} custumers.")
-            else:
-                st.error("Could not fetch data.")
+# 5. The Chat Input
+prompt = st.chat_input("Type your request here (e.g., 'Create a user named Batman')")
 
-elif option == "Create New User":
-    st.subheader("OnBoard New Custumer")
+if prompt:
+    # A. Show User Message
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-    new_name = st.text_input("Custumer Name")
-    new_balance = st.number_input("Opening Balance", min_value=0.0, step=100.0)
-
-    if st.button("Create Account"):
-        if new_name:
-            with st.spinner("Talking to Bank API..."):
-                result = tools.create_user_tool(new_name, new_balance)
-                st.success(f"Response: {result}")
-        else:
-            st.warning("Please enter a name.")         
-             
+    # B. The AI Brain (Thinking...)
+    with st.chat_message("model"):
+        with st.spinner("Talking to the Bank Vault..."):
+            try:
+                # Connect to Gemini
+                client = genai.Client(api_key=api_key)
+                
+                # Define Tools
+                my_tools = [tools.get_all_users, tools.create_user_tool]
+                
+                # Create Chat Session
+                # (Note: We use a stateless call here for simplicity in Streamlit)
+                response = client.models.generate_content(
+                    model="gemini-flash-latest",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        tools=my_tools,
+                        automatic_function_calling={"disable": False},
+                        system_instruction="You are a helpful Bank Agent. Use the tools to answer. Be concise."
+                    )
+                )
+                
+                # Show AI Response
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "model", "content": response.text})
+                
+            except Exception as e:
+                st.error(f"Error: {e}")
